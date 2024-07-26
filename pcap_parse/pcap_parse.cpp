@@ -773,8 +773,13 @@ int readPacket(std::ifstream & file, int chunk_size, FILE* file_video_out, FILE*
     return calc_chunk_size;
 }
 
+uint8_t sHeader[] = { 0x46, 0x4c, 0x56, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00 };
 int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FILE* file_audio_out)
 {
+    int tagType = 0;
+    int lastType = 0;
+    uint32_t ts = 0;
+    uint32_t last_ts = 0;
     uint32_t bodylen = -1;
     uint32_t bodysize = -1;
     bool  firstPacket = true;
@@ -818,10 +823,34 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
             }
 
             if (firstPacket) {
+                uint32_t ts0 = (uint32_t)buffer3[2];
+                uint32_t ts1 = ((uint32_t)buffer3[1]) << 8;
+                uint32_t ts2 = (((uint32_t)buffer3[0]) << 8) << 8;
+                ts = ts0 + ts1 + ts2;
+
+                if (ts == 0xffffff) {
+                    //扩展时间戳后面加上把
+                    std::vector<uint8_t> buffertsExt(4);
+                    if (file.read((char*)buffertsExt.data(), 4)) {
+                        // 成功读取数据，buffer中包含文件内容
+                        uint32_t ts0 = (uint32_t)buffertsExt[3];
+                        uint32_t ts1 = ((uint32_t)buffertsExt[2]) << 8;
+                        uint32_t ts2 = (((uint32_t)buffertsExt[1]) << 8) << 8;
+                        uint32_t ts3 = ((((uint32_t)buffertsExt[0]) << 8) << 8) << 8;
+                        ts = ts0 + ts1 + ts2 + ts3;
+                    }
+                    else {
+                        std::cerr << "读取文件失败2" << std::endl;
+                    }
+                }
+
+                last_ts = ts;
+
                 uint32_t tmp0 = (uint32_t)buffer3[5];
                 uint32_t tmp1 = ((uint32_t)buffer3[4]) << 8;
                 uint32_t tmp2 = (((uint32_t)buffer3[3]) << 8) << 8;
                 bodysize = tmp2 + tmp1 + tmp0;
+
                 std::cout << "0 bodysize: " << bodysize << ", buffer3[6]:" << (uint32_t)(buffer3[6]) << std::endl;
                 bodylen = bodysize;
 
@@ -842,6 +871,8 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
             {
                 //bodylen -= 12;
             }
+            tagType = type;
+            lastType = type;
             int32_t bodysubLen = bodylen > chunk_size ? chunk_size : bodylen;
             std::vector<uint8_t> buffer4(bodysubLen);
             if (file.read((char*)buffer4.data(), bodysubLen)) {
@@ -1042,6 +1073,29 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
             }
 
             if (firstPacket) {
+                uint32_t ts0 = (uint32_t)buffer3[2];
+                uint32_t ts1 = ((uint32_t)buffer3[1]) << 8;
+                uint32_t ts2 = (((uint32_t)buffer3[0]) << 8) << 8;
+                ts = ts0 + ts1 + ts2;
+
+                if (ts == 0xffffff) {
+                    //扩展时间戳后面加上把
+                    std::vector<uint8_t> buffertsExt(4);
+                    if (file.read((char*)buffertsExt.data(), 4)) {
+                        // 成功读取数据，buffer中包含文件内容
+                        uint32_t ts0 = (uint32_t)buffertsExt[3];
+                        uint32_t ts1 = ((uint32_t)buffertsExt[2]) << 8;
+                        uint32_t ts2 = (((uint32_t)buffertsExt[1]) << 8) << 8;
+                        uint32_t ts3 = ((((uint32_t)buffertsExt[0]) << 8) << 8) << 8;
+                        ts = ts0 + ts1 + ts2 + ts3;
+                    }
+                    else {
+                        std::cerr << "读取文件失败2" << std::endl;
+                    }
+                }
+
+                last_ts = ts;
+
                 uint32_t tmp0 = (uint32_t)buffer3[5];
                 uint32_t tmp1 = ((uint32_t)buffer3[4]) << 8;
                 uint32_t tmp2 = (((uint32_t)buffer3[3]) << 8) << 8;
@@ -1064,7 +1118,8 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
             if (!firstPacket) {
                 //bodylen -= 8;
             }
-
+            tagType = type;
+            lastType = type;
             int32_t bodysubLen = bodylen > chunk_size ? chunk_size : bodylen;
             std::vector<uint8_t> buffer4(bodysubLen);
             if (file.read((char*)buffer4.data(), bodysubLen)) {
@@ -1156,6 +1211,29 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
             }
 
             if (firstPacket) {
+                uint32_t ts0 = (uint32_t)buffer3[2];
+                uint32_t ts1 = ((uint32_t)buffer3[1]) << 8;
+                uint32_t ts2 = (((uint32_t)buffer3[0]) << 8) << 8;
+                ts = ts0 + ts1 + ts2;
+
+                if (ts == 0xffffff) {
+                    //扩展时间戳后面加上把
+                    std::vector<uint8_t> buffertsExt(4);
+                    if (file.read((char*)buffertsExt.data(), 4)) {
+                        // 成功读取数据，buffer中包含文件内容
+                        uint32_t ts0 = (uint32_t)buffertsExt[3];
+                        uint32_t ts1 = ((uint32_t)buffertsExt[2]) << 8;
+                        uint32_t ts2 = (((uint32_t)buffertsExt[1]) << 8) << 8;
+                        uint32_t ts3 = ((((uint32_t)buffertsExt[0]) << 8) << 8) << 8;
+                        ts = ts0 + ts1 + ts2 + ts3;
+                    }
+                    else {
+                        std::cerr << "读取文件失败2" << std::endl;
+                    }
+                }
+
+                last_ts = ts;
+
                 //bodylen -= 4;
                 if (lastaudio == (buffer1_1[0] & 0x3F))
                 {
@@ -1167,8 +1245,11 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
                     bodysize = lastVideolen;
                     bodylen = lastVideolen;
                 }
-            }
 
+                //ts = last_ts;
+                tagType = lastType;
+            }
+            
             //bodylen = bodysize;
             int32_t bodysubLen = bodylen > chunk_size ? chunk_size : bodylen;
             std::vector<uint8_t> buffer4(bodysubLen);
@@ -1255,6 +1336,7 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
             //}
 
             if (firstPacket) {
+                ts = last_ts;
                 //bodylen += 1;
                 if (lastaudio == (buffer1_1[0] & 0x3F))
                 {
@@ -1266,8 +1348,9 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
                     bodysize = lastVideolen;
                     bodylen = lastVideolen;
                 }
+                tagType = lastType;
             }
-
+            
             int32_t bodysubLen = bodylen > chunk_size ? chunk_size : bodylen;
             std::vector<uint8_t> buffer4(bodysubLen);
             if (file.read((char*)buffer4.data(), bodysubLen)) {
@@ -1424,7 +1507,7 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
 }
 
 int main() {
-    std::ifstream file("D:\\BaiduNetdiskDownload\\ffmpeg_vs2019\\msvc\\ubuntu_64_1111_2", std::ios::binary);
+    std::ifstream file("E:\\BaiduNetdiskDownload\\ffmpeg_vs2019\\msvc\\bin\\x64\\rtmp_hevc_2", std::ios::binary);
     if (!file) {
         std::cerr << "无法打开文件" << std::endl;
         return 1;
