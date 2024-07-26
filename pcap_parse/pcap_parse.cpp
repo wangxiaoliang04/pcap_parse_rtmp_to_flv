@@ -941,78 +941,102 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out, FI
                     }
                     else if (buffer3[6] == 0x12)
                     {
-                        uint8_t type = buffer4[0]; //0x02 string
-                        uint32_t tmp1 = buffer4[1];
-                        uint32_t tmp2 = buffer4[2];
-                        uint32_t body_len = tmp2 + (tmp1 << 8);
+                        vecMerged.push_back(type);
+                        //((bodysubLen >> 8) >> 8) & 0xff;
+                        uint8_t tmp1 = (((bodysubLen) >> 8) >> 8) & 0xff;
+                        uint8_t tmp2 = ((bodysubLen) >> 8) & 0xff;
+                        uint8_t tmp3 = (bodysubLen) & 0xff;
+                        vecMerged.push_back(tmp1);
+                        vecMerged.push_back(tmp2);
+                        vecMerged.push_back(tmp3);
 
-                        type = buffer4[3 + body_len];
-                        uint32_t tmp3 = buffer4[3 + body_len + 1];
-                        uint32_t tmp4 = buffer4[3 + body_len + 2];
-                        uint32_t body_len1 = tmp4 + (tmp3 << 8);
-                        std::cout << " body_len:" << body_len << std::endl;
+                        uint32_t timestampbase = ts & 0xffffff;
+                        uint8_t timestampExt = ts >> 24 & 0xff;
 
-                        type = buffer4[3 + body_len + 2 + 1 + body_len1];
-                        std::cout << " array type:" << type << std::endl;
+                        uint8_t ts1 = (((timestampbase) >> 8) >> 8) & 0xff;
+                        uint8_t ts2 = ((timestampbase) >> 8) & 0xff;
+                        uint8_t ts3 = (timestampbase) & 0xff;
+                        vecMerged.push_back(ts1);
+                        vecMerged.push_back(ts2);
+                        vecMerged.push_back(ts3);
+                        vecMerged.push_back(timestampExt);
+                        vecMerged.push_back(0);
+                        vecMerged.push_back(0);
+                        vecMerged.push_back(0);
+                        vecMerged.insert(vecMerged.end(), buffer4.begin(), buffer4.end());
 
-                        uint32_t tmpArr1 = buffer4[3 + body_len + 2 + 1 + body_len1 + 1];
-                        uint32_t tmpArr2 = buffer4[3 + body_len + 2 + 1 + body_len1 + 2];
-                        uint32_t tmpArr3 = buffer4[3 + body_len + 2 + 1 + body_len1 + 3];
-                        uint32_t tmpArr4 = buffer4[3 + body_len + 2 + 1 + body_len1 + 4];
+                        //uint8_t type = buffer4[0]; //0x02 string
+                        //uint32_t tmp1 = buffer4[1];
+                        //uint32_t tmp2 = buffer4[2];
+                        //uint32_t body_len = tmp2 + (tmp1 << 8);
 
-                        uint32_t arr_index = 3 + body_len + 2 + 1 + body_len1 + 4 + 1;
-                        uint8_t arr_len = (((tmpArr1 << 8) << 8) << 8) + ((tmpArr2 << 8) << 8) + ((tmpArr3) << 8) + tmpArr4;
-                        for (int index = 0; index < arr_len; index++)
-                        {
-                            uint32_t tmpArrLen1 = buffer4[arr_index];
-                            uint32_t tmpArrLen2 = buffer4[arr_index + 1];
+                        //type = buffer4[3 + body_len];
+                        //uint32_t tmp3 = buffer4[3 + body_len + 1];
+                        //uint32_t tmp4 = buffer4[3 + body_len + 2];
+                        //uint32_t body_len1 = tmp4 + (tmp3 << 8);
+                        //std::cout << " body_len:" << body_len << std::endl;
 
-                            uint32_t name_len = (tmpArrLen1 << 8) + tmpArrLen2;
+                        //type = buffer4[3 + body_len + 2 + 1 + body_len1];
+                        //std::cout << " array type:" << type << std::endl;
 
-                            char szTmp[1024] = { 0 };
-                            memcpy(szTmp, &buffer4[arr_index + 1 + 1], name_len);
+                        //uint32_t tmpArr1 = buffer4[3 + body_len + 2 + 1 + body_len1 + 1];
+                        //uint32_t tmpArr2 = buffer4[3 + body_len + 2 + 1 + body_len1 + 2];
+                        //uint32_t tmpArr3 = buffer4[3 + body_len + 2 + 1 + body_len1 + 3];
+                        //uint32_t tmpArr4 = buffer4[3 + body_len + 2 + 1 + body_len1 + 4];
 
-                            uint8_t type = buffer4[arr_index + 1 + name_len + 1];
-                            std::cout << " array type:" << type << std::endl;
-                            if (type == 0)
-                            {
-                                uint64_t host_value = 0;
-                                memcpy(&host_value, &buffer4[arr_index + 1 + name_len + 1 + 1], 8);
-                                //actual_len += sizeof(uint64_t);
-                                host_value = ntohll(host_value);
-                                double dhost = av_int2double(host_value);
-                                arr_index = arr_index + 1 + name_len + 1 + 1 + 8;
-                                if (0 == strcmp(szTmp, "videocodecid"))
-                                {
-                                    videocodecid_ = dhost;
-                                }
-                                if (0 == strcmp(szTmp, "audiocodecid"))
-                                {
-                                    audiocodecid_ = dhost;
-                                }
-                            }
-                            else if (type == 1)
-                            {
-                                uint8_t host_value = 0;
-                                host_value = buffer4[arr_index + 1 + name_len + 1 + 1];
-                                arr_index = arr_index + 1 + name_len + 1 + 1 + 1;
-                            }
-                            else if (type == 2)
-                            {
-                                uint16_t host_value = 0;
-                                /*if (fread(&host_value, sizeof(uint16_t), 1, fp) != 1)
-                                {
-                                    printf("can not read ip_header, i:%d\n", i);
-                                    break;
-                                }*/
+                        //uint32_t arr_index = 3 + body_len + 2 + 1 + body_len1 + 4 + 1;
+                        //uint8_t arr_len = (((tmpArr1 << 8) << 8) << 8) + ((tmpArr2 << 8) << 8) + ((tmpArr3) << 8) + tmpArr4;
+                        //for (int index = 0; index < arr_len; index++)
+                        //{
+                        //    uint32_t tmpArrLen1 = buffer4[arr_index];
+                        //    uint32_t tmpArrLen2 = buffer4[arr_index + 1];
 
-                                uint8_t str_len1 = buffer4[arr_index + 1 + name_len + 1 + 1];
-                                uint8_t str_len2 = buffer4[arr_index + 1 + name_len + 1 + 2];
-                                host_value = (str_len1 << 8) + str_len2;
-                                arr_index = arr_index + 1 + name_len + 1 + 2 + host_value + 1;
-                            }
-                        }
-                        arr_index += 3;
+                        //    uint32_t name_len = (tmpArrLen1 << 8) + tmpArrLen2;
+
+                        //    char szTmp[1024] = { 0 };
+                        //    memcpy(szTmp, &buffer4[arr_index + 1 + 1], name_len);
+
+                        //    uint8_t type = buffer4[arr_index + 1 + name_len + 1];
+                        //    std::cout << " array type:" << type << std::endl;
+                        //    if (type == 0)
+                        //    {
+                        //        uint64_t host_value = 0;
+                        //        memcpy(&host_value, &buffer4[arr_index + 1 + name_len + 1 + 1], 8);
+                        //        //actual_len += sizeof(uint64_t);
+                        //        host_value = ntohll(host_value);
+                        //        double dhost = av_int2double(host_value);
+                        //        arr_index = arr_index + 1 + name_len + 1 + 1 + 8;
+                        //        if (0 == strcmp(szTmp, "videocodecid"))
+                        //        {
+                        //            videocodecid_ = dhost;
+                        //        }
+                        //        if (0 == strcmp(szTmp, "audiocodecid"))
+                        //        {
+                        //            audiocodecid_ = dhost;
+                        //        }
+                        //    }
+                        //    else if (type == 1)
+                        //    {
+                        //        uint8_t host_value = 0;
+                        //        host_value = buffer4[arr_index + 1 + name_len + 1 + 1];
+                        //        arr_index = arr_index + 1 + name_len + 1 + 1 + 1;
+                        //    }
+                        //    else if (type == 2)
+                        //    {
+                        //        uint16_t host_value = 0;
+                        //        /*if (fread(&host_value, sizeof(uint16_t), 1, fp) != 1)
+                        //        {
+                        //            printf("can not read ip_header, i:%d\n", i);
+                        //            break;
+                        //        }*/
+
+                        //        uint8_t str_len1 = buffer4[arr_index + 1 + name_len + 1 + 1];
+                        //        uint8_t str_len2 = buffer4[arr_index + 1 + name_len + 1 + 2];
+                        //        host_value = (str_len1 << 8) + str_len2;
+                        //        arr_index = arr_index + 1 + name_len + 1 + 2 + host_value + 1;
+                        //    }
+                        //}
+                        //arr_index += 3;
                     }
                 }
                 else
@@ -1550,36 +1574,36 @@ int main() {
     }
 
     //connect
-    readPacket(file, 128, file_video_out, file_audio_out);
+    readPacket_Flv(file, 128, file_video_out, file_audio_out);
 
     //Window Acknowledgement Size
-    readPacket(file, 128, file_video_out, file_audio_out);
+    readPacket_Flv(file, 128, file_video_out, file_audio_out);
     //Set Peer Bandwidth
-    readPacket(file, 128, file_video_out, file_audio_out);
+    readPacket_Flv(file, 128, file_video_out, file_audio_out);
 
     //Set Chunk Size
-    int chunk_size = readPacket(file, 128, file_video_out, file_audio_out);
+    int chunk_size = readPacket_Flv(file, 128, file_video_out, file_audio_out);
     //_result
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
     //Set Chunk Size
-    chunk_size = readPacket(file, chunk_size, file_video_out, file_audio_out);
+    chunk_size = readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
 
     //releaseStream
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
     //FCPublish
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
     //createStream
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
 
     //_result
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
     //publish
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
     //_result
     //readPacket(file, chunk_size, file_video_out, file_audio_out);
 
     //onStatus
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
 
     //publish
     //readPacket(file, chunk_size, file_video_out, file_audio_out);
@@ -1588,16 +1612,16 @@ int main() {
     //readPacket(file, chunk_size, file_video_out, file_audio_out);
 
     //setDataFrame
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
 
     //video Data
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
 
     //audio Data
-    readPacket(file, chunk_size, file_video_out, file_audio_out);
+    readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
 
     while (!file.eof()) {
-        readPacket(file, chunk_size, file_video_out, file_audio_out);
+        readPacket_Flv(file, chunk_size, file_video_out, file_audio_out);
     }
     fclose(file_video_out);
     fclose(file_audio_out);
