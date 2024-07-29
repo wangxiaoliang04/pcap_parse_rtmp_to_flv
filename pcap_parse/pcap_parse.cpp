@@ -34,6 +34,9 @@ int lastType = 0;
 uint32_t last_videots = 0;
 uint32_t last_audiots = 0;
 
+uint32_t last_videoDeltaTs = 0;
+uint32_t last_audioDeltaTs = 0;
+
 uint8_t profile = 0;
 int sampleRate = 0;
 uint8_t channel = 0;
@@ -849,10 +852,12 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
                 if (buffer3[6] == 0x09)
                 {
                     last_videots += ts;
+                    last_videoDeltaTs = ts;
                 }
                 else if (buffer3[6] == 0x08)
                 {
                     last_audiots += ts;
+                    last_audioDeltaTs = ts;
                 }
 
                 uint32_t tmp0 = (uint32_t)buffer3[5];
@@ -860,7 +865,8 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
                 uint32_t tmp2 = (((uint32_t)buffer3[3]) << 8) << 8;
                 bodysize = tmp2 + tmp1 + tmp0;
 
-                std::cout << "0 bodysize: " << bodysize << ", buffer3[6]:" << (uint32_t)(buffer3[6]) << std::endl;
+                std::cout << "0 bodysize: " << bodysize << ", buffer3[6]:" << (uint32_t)(buffer3[6]) << ",last_videots:" << last_videots
+                    << ",last_audiots:" << last_audiots << std::endl;
                 bodylen = bodysize;
 
                 if (buffer3[6] == 0x08)
@@ -1177,6 +1183,16 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
                 std::cerr << "读取文件失败4" << std::endl;
             }
 
+            if (buffer3[6] == 0x08)
+            {
+                lastaudio = buffer1_1[0] & 0x3F;
+            }
+
+            if (buffer3[6] == 0x09)
+            {
+                lastVideo = buffer1_1[0] & 0x3F;
+            }
+
             if (firstPacket) {
                 uint32_t ts0 = (uint32_t)buffer3[2];
                 uint32_t ts1 = ((uint32_t)buffer3[1]) << 8;
@@ -1202,17 +1218,20 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
                 if (lastVideo == channel_id)
                 {
                     last_videots += ts;
+                    last_videoDeltaTs = ts;
                 }
                 else if (lastaudio == channel_id)
                 {
                     last_audiots += ts;
+                    last_audioDeltaTs = ts;
                 }
 
                 uint32_t tmp0 = (uint32_t)buffer3[5];
                 uint32_t tmp1 = ((uint32_t)buffer3[4]) << 8;
                 uint32_t tmp2 = (((uint32_t)buffer3[3]) << 8) << 8;
                 bodysize = tmp2 + tmp1 + tmp0;
-                std::cout << "1 bodysize: " << bodysize << ",buffer3[6]:" << (uint32_t)(buffer3[6]) << std::endl;
+                std::cout << "1 bodysize: " << bodysize << ",buffer3[6]:" << (uint32_t)(buffer3[6]) << ",last_videots:" << last_videots
+                    << ",last_audiots:" << last_audiots << std::endl;
                 bodylen = bodysize;
 
                 if (buffer3[6] == 0x08)
@@ -1239,7 +1258,7 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
                 //std::cout << "文件大小: " << bodysubLen << " 字节" << std::endl;
                 if (firstPacket == true)
                 {
-                    if (lastVideo == channel_id && buffer4[1] == 0x01 && buffer4[2] == 0x00 && buffer4[3] == 0x00 /*&& buffer4[4] == 0x00*/)
+                    if (lastVideo == channel_id && buffer4[1] == 0x01 && buffer4[2] == 0x00 /*&& buffer4[3] == 0x00*/ /*&& buffer4[4] == 0x00*/)
                     {
                         //vecMerged.insert(vecMerged.end(), buffer4.begin() + 5, buffer4.end());
                         vecMerged.push_back(0x09);
@@ -1394,10 +1413,12 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
                 if (lastVideo == channel_id)
                 {
                     last_videots += ts;
+                    last_videoDeltaTs = ts;
                 }
                 else if (lastaudio == channel_id)
                 {
                     last_audiots += ts;
+                    last_audioDeltaTs = ts;
                 }
 
                 //bodylen -= 4;
@@ -1411,6 +1432,9 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
                     bodysize = lastVideolen;
                     bodylen = lastVideolen;
                 }
+
+                std::cout << "2 bodysize: " << bodysize << ",lastType:" << (uint32_t)lastType << ",last_videots:" << last_videots
+                    << ",last_audiots:" << last_audiots << std::endl;
 
                 //ts = last_ts;
                 tagType = lastType;
@@ -1552,13 +1576,14 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
             if (firstPacket) {
                 if (lastVideo == channel_id)
                 {
-                    ts += last_videots;
-                    last_videots = ts;
+                    //ts += last_videots;
+                    //last_videoDeltaTs
+                    last_videots += last_videoDeltaTs;
                 }
                 else if (lastaudio == channel_id)
                 {
-                    ts += last_audiots;
-                    last_audiots = ts;
+                    //ts += last_audiots;
+                    last_audiots += last_audioDeltaTs;
                 }
                 
                 //bodylen += 1;
@@ -1573,6 +1598,9 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
                     bodylen = lastVideolen;
                 }
                 tagType = lastType;
+
+                std::cout << "3 bodysize: " << bodysize << ",lastType:" << (uint32_t)lastType << ",last_videots:" << last_videots
+                    << ",last_audiots:" << last_audiots << std::endl;
             }
             
             int32_t bodysubLen = bodylen > chunk_size ? chunk_size : bodylen;
@@ -1826,7 +1854,7 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
 }
 
 int main() {
-    std::ifstream file("D:\\BaiduNetdiskDownload\\ffmpeg_vs2019\\msvc\\ubuntu_64_1111_2", std::ios::binary);
+    std::ifstream file("E:\\BaiduNetdiskDownload\\ffmpeg_vs2019\\msvc\\bin\\x64\\audio_and_video_async111", std::ios::binary);
     if (!file) {
         std::cerr << "无法打开文件" << std::endl;
         return 1;
@@ -1873,14 +1901,17 @@ int main() {
     //connect
     readPacket_Flv(file, 128, file_video_out);
 
-    //Window Acknowledgement Size
-    readPacket_Flv(file, 128, file_video_out);
-    //Set Peer Bandwidth
-    readPacket_Flv(file, 128, file_video_out);
-
     //Set Chunk Size
     int chunk_size = readPacket_Flv(file, 128, file_video_out);
+
+    //Window Acknowledgement Size
+    readPacket_Flv(file, chunk_size, file_video_out);
+    //Set Peer Bandwidth
+    readPacket_Flv(file, chunk_size, file_video_out);
+
     //_result
+    readPacket_Flv(file, chunk_size, file_video_out);
+    //onBWDone
     readPacket_Flv(file, chunk_size, file_video_out);
     //Set Chunk Size
     chunk_size = readPacket_Flv(file, chunk_size, file_video_out);
@@ -1890,6 +1921,8 @@ int main() {
     //FCPublish
     readPacket_Flv(file, chunk_size, file_video_out);
     //createStream
+    readPacket_Flv(file, chunk_size, file_video_out);
+    //_checkbw
     readPacket_Flv(file, chunk_size, file_video_out);
 
     //_result
@@ -1917,8 +1950,10 @@ int main() {
     //audio Data
     readPacket_Flv(file, chunk_size, file_video_out);
 
-    while (!file.eof()) {
+    //int index = 0;
+    while ((!file.eof()) /*&& (index <= 1500)*/) {
         readPacket_Flv(file, chunk_size, file_video_out);
+        //index++;
     }
     fclose(file_video_out);
     fclose(file_audio_out);
