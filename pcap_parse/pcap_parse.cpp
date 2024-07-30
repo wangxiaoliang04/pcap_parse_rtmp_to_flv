@@ -1854,7 +1854,7 @@ int readPacket_Flv(std::ifstream& file, int chunk_size, FILE* file_video_out)
 }
 
 int main() {
-    std::ifstream file("E:\\BaiduNetdiskDownload\\ffmpeg_vs2019\\msvc\\bin\\x64\\audio_and_video_async111", std::ios::binary);
+    std::ifstream file("D:\\BaiduNetdiskDownload\\ffmpeg_vs2019\\msvc\\127003_1_hevc", std::ios::binary);
     if (!file) {
         std::cerr << "无法打开文件" << std::endl;
         return 1;
@@ -1901,18 +1901,18 @@ int main() {
     //connect
     readPacket_Flv(file, 128, file_video_out);
 
+    //Window Acknowledgement Size
+    readPacket_Flv(file, 128, file_video_out);
+    //Set Peer Bandwidth
+    readPacket_Flv(file, 128, file_video_out);
+
     //Set Chunk Size
     int chunk_size = readPacket_Flv(file, 128, file_video_out);
-
-    //Window Acknowledgement Size
-    readPacket_Flv(file, chunk_size, file_video_out);
-    //Set Peer Bandwidth
-    readPacket_Flv(file, chunk_size, file_video_out);
 
     //_result
     readPacket_Flv(file, chunk_size, file_video_out);
     //onBWDone
-    readPacket_Flv(file, chunk_size, file_video_out);
+    //readPacket_Flv(file, chunk_size, file_video_out);
     //Set Chunk Size
     chunk_size = readPacket_Flv(file, chunk_size, file_video_out);
 
@@ -1923,7 +1923,7 @@ int main() {
     //createStream
     readPacket_Flv(file, chunk_size, file_video_out);
     //_checkbw
-    readPacket_Flv(file, chunk_size, file_video_out);
+    //readPacket_Flv(file, chunk_size, file_video_out);
 
     //_result
     readPacket_Flv(file, chunk_size, file_video_out);
